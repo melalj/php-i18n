@@ -1,0 +1,10 @@
+global:
+	not_connected: "Not connected"
+	invalid_format: "Invalid format"
+	update_success: "Updated successfully"
+	wrong_parameters: "Wrong parameters"
+	empty_fields: "Please fill in all required fields"
+ctrl:
+	error:
+		not_found:
+			title: "Not found"

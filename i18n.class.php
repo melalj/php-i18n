@@ -8,15 +8,14 @@
  * License URL: http://creativecommons.org/licenses/by-sa/3.0/deed.en
  */
 
-class i18n {
-
+class i18nLoader {
     /**
      * Language file path
      * This is the path for the language files. You must use the '{LANGUAGE}' placeholder for the language or the script wont find any language files.
      *
      * @var string
      */
-    protected $filePath = './lang/lang_{LANGUAGE}.ini';
+    protected $filePath = '../config/locales/{LANGUAGE}.yml';
 
     /**
      * Cache file path
@@ -24,7 +23,7 @@ class i18n {
      *
      * @var string
      */
-    protected $cachePath = './langcache/';
+    protected $cachePath = '../tmp/langcache/';
 
     /**
      * Fallback language
@@ -39,7 +38,7 @@ class i18n {
      * The class name of the compiled class that contains the translated texts.
      * @var string
      */
-    protected $prefix = 'L';
+    protected $prefix = 'i18n';
 
     /**
      * Forced language
@@ -56,7 +55,7 @@ class i18n {
      *
      * @var string
      */
-    protected $sectionSeperator = '_';
+    protected $sectionSeperator = '.';
 
 
     /*
@@ -153,10 +152,8 @@ class i18n {
             }
 
             $compiled = "<?php class " . $this->prefix . " {\n";
-            $compiled .= $this->compile($config);
-            $compiled .= 'public static function __callStatic($string, $args) {' . "\n";
-            $compiled .= 'vprintf(constant("self::" . $string), $args);' . "\n";
-            $compiled .= "}\n}";
+            $compiled .= $this->compile_function_t($config);
+            $compiled .= "}";
 
             if (file_put_contents($this->cacheFilePath, $compiled) === FALSE) {
                 throw new Exception("Could not write cache file to path '" . $this->cacheFilePath . "'. Is it writable?");
@@ -269,13 +266,29 @@ class i18n {
     /**
      * Recursively compile an associative array to PHP code.
      */
+    protected function compile_function_t($config, $prefix = '') {
+        $compiled = 'public static function t($string, $args="") {';
+        $compiled .= '$dictionary = array(';
+        $compiled .= $this->compile($config, $prefix);
+        $compiled .= '\'.\' => \'\');'; // Hack to remove to avoid syntax error with the comma
+        $compiled .= 'if(is_array($args)){';
+        $compiled .= 'return vprintf($dictionary[$string], $args);';
+        $compiled .= '}';
+        $compiled .= 'return $dictionary[$string];';
+        $compiled .= "}";
+        return $compiled;
+    }
+
+    /**
+     * Recursively compile an associative array to PHP code.
+     */
     protected function compile($config, $prefix = '') {
-        $code = '';
+        $code = "";
         foreach ($config as $key => $value) {
             if (is_array($value)) {
                 $code .= $this->compile($value, $prefix . $key . $this->sectionSeperator);
             } else {
-                $code .= 'const ' . $prefix . $key . ' = \'' . str_replace('\'', '\\\'', $value) . "';\n";
+                $code .= '\'' . $prefix.$key . '\' => \'' . str_replace('\'', '\\\'', $value) . "',";
             }
         }
         return $code;
